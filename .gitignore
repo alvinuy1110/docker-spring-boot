@@ -1,0 +1,9 @@
+.compatibility
+.classpath
+.cvsignore
+.project
+.j2ee
+.server
+.idea
+**/*.iml
+**/target

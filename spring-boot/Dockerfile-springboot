@@ -1,0 +1,57 @@
+## Spring boot docker
+## Jdk version
+FROM openjdk:8-jdk-alpine
+
+## Cert directory
+ARG CERT_DIR=trust-certs/
+
+## update JDK truststore and add custom trust certs
+COPY ${CERT_DIR} /usr/local/share/ca-certificates/
+RUN update-ca-certificates && \
+    cd /usr/local/share/ca-certificates \
+    ls -1 /usr/local/share/ca-certificates | while read cert; do \
+        keytool -import -alias $cert -keystore $JAVA_HOME/jre/lib/security/cacerts -trustcacerts -file $cert -storepass changeit -noprompt; \
+    done
+
+## add labels
+LABEL Description="This image is used to start spring boot apps"
+LABEL JDK_version="8"
+
+#Set app home folder
+ENV APP_HOME /app
+#Possibility to set JVM options (https://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html)
+ENV JAVA_OPTS=""
+
+#Create base app folder
+RUN mkdir $APP_HOME
+#Create folder to save configuration files
+RUN mkdir $APP_HOME/config
+#Create folder with application logs
+RUN mkdir $APP_HOME/log
+
+## Volumes
+VOLUME $APP_HOME/log
+VOLUME $APP_HOME/config
+
+## start / home dir
+WORKDIR $APP_HOME
+
+## arg with default value
+ARG JAR_FILE=binary/*.jar
+ARG APP_PROPERTIES=config/*
+
+## automatically add options
+ARG JAVA_EXTRA_OPTS="-Djava.security.egd=file:/dev/./urandom"
+
+## Copy the binary/ configs
+COPY ${JAR_FILE} $APP_HOME/app.jar
+COPY ${APP_PROPERTIES} $APP_HOME/config
+
+## execute
+RUN cd $APP_HOME
+
+## allow accepting of extra arguments
+#ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} ${JAVA_EXTRA_OPTS} -jar app.jar ${0} ${@}"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} ${JAVA_EXTRA_OPTS} -jar app.jar ${0} ${@} > ${APP_HOME}/log/stdout.txt"]
+# expose
+EXPOSE 8080
